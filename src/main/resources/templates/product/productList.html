@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>상품 목록</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/custom.css">
+    <style>
+        .card-img-top {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+<div class="container mt-4">
+    <h1 class="mb-4">상품 목록</h1>
+    <form th:action="@{/product/list}" method="get" class="mb-3">
+        <div class="input-group">
+            <input type="text" class="form-control" name="keyword" placeholder="상품 검색" th:value="${keyword}">
+            <button type="submit" class="btn btn-outline-secondary">검색</button>
+        </div>
+    </form>
+    <div class="row row-cols-1 row-cols-md-3 g-4" th:if="${productPage.content != null}">
+        <div class="col" th:each="product : ${productPage.content}">
+            <div class="card h-100">
+                <img th:src="${(product.image != null and !#strings.isEmpty(product.image)) ? '/uploads/' + product.image : '/images/default.png'}"
+                     class="card-img-top" alt="상품 이미지">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${product.title}">상품 제목</h5>
+                    <p class="card-text" th:text="${product.description}">상품 설명</p>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <small class="text-muted" th:text="'가격: ' + ${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + '원'"></small>
+                    <div>
+                        <button class="btn btn-outline-danger btn-sm toggleFavoriteBtn" type="button"
+                                th:attr="data-product-id=${product.id}">
+                            <i class="bi" th:classappend="${favoriteProductIds != null and favoriteProductIds.contains(product.id)} ? 'bi-heart-fill' : 'bi-heart'"></i>
+                        </button>
+                        <a th:href="@{/product/detail/{id}(id=${product.id})}" class="btn btn-primary btn-sm ms-2">자세히</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 페이지네이션 바 -->
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                <li class="page-item" th:classappend="${productPage.first} ? 'disabled'">
+                    <a class="page-link" th:href="@{'/product/list'(page=${productPage.number - 1}, keyword=${keyword})}" aria-label="Previous">&laquo;</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, productPage.totalPages - 1)}"
+                    th:classappend="${productPage.number == i} ? 'active'">
+                    <a class="page-link" th:href="@{'/product/list'(page=${i}, keyword=${keyword})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${productPage.last} ? 'disabled'">
+                    <a class="page-link" th:href="@{'/product/list'(page=${productPage.number + 1}, keyword=${keyword})}" aria-label="Next">&raquo;</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.querySelectorAll('.toggleFavoriteBtn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var productId = btn.getAttribute("data-product-id");
+            fetch("/product/favorite/toggle?productId=" + productId, { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.favorited) {
+                        btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+                    } else {
+                        btn.innerHTML = '<i class="bi bi-heart"></i>';
+                    }
+                })
+                .catch(error => console.error("Error toggling favorite:", error));
+        });
+    });
+</script>
+</body>
+</html>사

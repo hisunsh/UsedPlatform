@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>1:1 대화방 - Dark Theme</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* 스타일은 기존 코드 그대로 사용 */
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.8);
+      padding: 20px;
+    }
+    .chat-window {
+      height: 450px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      padding: 15px;
+      background-color: #2e2e2e;
+      border-radius: 5px;
+    }
+    .chat-message {
+      display: flex;
+      margin-bottom: 10px;
+      align-items: flex-end;
+    }
+    .chat-message.sent {
+      justify-content: flex-end;
+    }
+    .chat-message.received {
+      justify-content: flex-start;
+    }
+    .message-content {
+      max-width: 65%;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .chat-message.sent .message-content {
+      background: linear-gradient(135deg, #0d47a1, #1565c0);
+      color: #ffffff;
+    }
+    .chat-message.received .message-content {
+      background-color: #424242;
+      color: #e0e0e0;
+    }
+    .message-time {
+      font-size: 12px;
+      color: #bdbdbd;
+      margin-top: 5px;
+      text-align: right;
+    }
+    .chat-input {
+      margin-top: 15px;
+    }
+    .chat-input .form-control {
+      background-color: #2e2e2e;
+      color: #e0e0e0;
+      border: 1px solid #333;
+    }
+    .chat-input .btn-primary {
+      background-color: #1565c0;
+      border-color: #0d47a1;
+    }
+  </style>
+</head>
+<body>
+<div class="container chat-container">
+  <h3 class="mb-4 text-center">1:1 대화방</h3>
+  <p class="text-center">
+    대화 상대: <span th:text="${receiver}">상대방</span><br>
+    방 번호: <span th:text="${roomId}">0</span>
+  </p>
+  <div id="chatWindow" class="chat-window">
+    <div th:each="msg : ${messages}"
+         th:class="'chat-message ' + (${msg.sender} eq ${sender} ? 'sent' : 'received')">
+      <div class="message-content">
+        <div class="message-sender" th:text="${msg.sender}">username</div>
+        <div class="message-text" th:text="${msg.content}">메시지</div>
+        <div class="message-time" th:text="${#temporals.format(msg.timestamp, 'HH:mm')}">00:00</div>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input input-group">
+    <input type="text" id="messageInput" class="form-control" placeholder="메시지를 입력하세요">
+    <button class="btn btn-primary" type="button" id="sendBtn">전송</button>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script th:inline="javascript">
+  var sender = /*[[${sender}]]*/ "anonymous";
+  var receiver = /*[[${receiver}]]*/ "unknown";
+  var roomId = /*[[${roomId}]]*/ 0;
+  var stompClient = null;
+
+  function connect() {
+    var socket = new SockJS('/ws-chat');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function(frame) {
+      console.log('Connected: ' + frame);
+      stompClient.subscribe('/topic/messages', function(messageOutput) {
+        var message = JSON.parse(messageOutput.body);
+        if (message.roomId == roomId &&
+                ((message.sender === sender && message.receiver === receiver) ||
+                        (message.sender === receiver && message.receiver === sender))) {
+          showMessage(message);
+        }
+      });
+    });
+  }
+
+  function sendMessage() {
+    var input = document.getElementById("messageInput");
+    var content = input.value.trim();
+    if (!content || !stompClient) return;
+    var chatMessage = {
+      roomId: roomId,
+      sender: sender,
+      receiver: receiver,
+      content: content
+    };
+    stompClient.send("/app/chat.send", {}, JSON.stringify(chatMessage));
+    input.value = "";
+  }
+
+  function showMessage(message) {
+    var chatWindow = document.getElementById("chatWindow");
+    var messageDiv = document.createElement("div");
+    messageDiv.classList.add("chat-message");
+    if (message.sender === sender) {
+      messageDiv.classList.add("sent");
+    } else {
+      messageDiv.classList.add("received");
+    }
+    var contentDiv = document.createElement("div");
+    contentDiv.classList.add("message-content");
+
+    var senderDiv = document.createElement("div");
+    senderDiv.classList.add("message-sender");
+    senderDiv.innerText = message.sender;
+    contentDiv.appendChild(senderDiv);
+
+    var textDiv = document.createElement("div");
+    textDiv.classList.add("message-text");
+    textDiv.innerText = message.content;
+    contentDiv.appendChild(textDiv);
+
+    var timeDiv = document.createElement("div");
+    timeDiv.classList.add("message-time");
+    if (message.timestamp) {
+      timeDiv.innerText = message.timestamp.substring(11,16);
+    } else {
+      timeDiv.innerText = "00:00";
+    }
+    contentDiv.appendChild(timeDiv);
+
+    messageDiv.appendChild(contentDiv);
+    chatWindow.appendChild(messageDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  document.getElementById("sendBtn").addEventListener("click", sendMessage);
+  document.getElementById("messageInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  window.onload = connect;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

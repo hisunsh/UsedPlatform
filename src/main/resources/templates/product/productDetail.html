@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>상품 상세</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        .product-image {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div class="container mt-4">
+    <div class="card">
+        <img th:src="${(product.image != null and !#strings.isEmpty(product.image)) ? '/uploads/' + product.image : '/images/default.png'}"
+             class="card-img-top product-image" alt="상품 이미지">
+        <div class="card-body">
+            <h2 class="card-title" th:text="${product.title}">상품 제목</h2>
+            <p class="card-text" th:text="${product.description}">상품 설명</p>
+            <p class="card-text">
+                <strong>가격: </strong>
+                <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')}">가격</span>원
+            </p>
+            <p class="card-text">
+                <strong>판매자: </strong>
+                <span th:text="${product.seller}">판매자</span>
+            </p>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <div class="btn-group" role="group">
+                <button id="toggleFavoriteBtn" class="btn btn-outline-danger" type="button"
+                        th:attr="data-product-id=${product.id}">
+                    <i class="bi bi-heart"></i> 찜하기
+                </button>
+                <a th:href="@{'/chat/room'(receiver=${product.seller}, productId=${product.id})}" class="btn btn-outline-primary">
+                    <i class="bi bi-chat-dots"></i> 1:1 대화
+                </a>
+            </div>
+            <div class="btn-group" role="group" th:if="${currentUsername == product.seller}">
+                <a th:href="@{'/product/edit/' + ${product.id}}" class="btn btn-success">수정</a>
+                <form th:action="@{'/product/delete/' + ${product.id}}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById("toggleFavoriteBtn").addEventListener("click", function() {
+        var btn = this;
+        var productId = btn.getAttribute("data-product-id");
+        fetch("/product/favorite/toggle?productId=" + productId, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.favorited) {
+                    btn.innerHTML = '<i class="bi bi-heart-fill"></i> 찜됨';
+                } else {
+                    btn.innerHTML = '<i class="bi bi-heart"></i> 찜하기';
+                }
+            })
+            .catch(error => console.error("Error toggling favorite:", error));
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>마이페이지</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card-img-top {
+      object-fit: cover;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div class="container mt-4">
+  <h1 class="mb-4">마이페이지</h1>
+
+  <h3>내 정보</h3>
+  <table class="table table-bordered">
+    <tr>
+      <th>아이디</th>
+      <td th:text="${member.username}"></td>
+    </tr>
+    <tr>
+      <th>이메일</th>
+      <td th:text="${member.email}"></td>
+    </tr>
+    <tr>
+      <th>이름</th>
+      <td th:text="${member.name}"></td>
+    </tr>
+    <tr>
+      <th>생년월일</th>
+      <td th:text="${member.birthDate}"></td>
+    </tr>
+    <tr>
+      <th>성별</th>
+      <td th:text="${member.gender}"></td>
+    </tr>
+  </table>
+
+  <hr>
+  <h3>내가 등록한 상품</h3>
+  <div th:if="${#lists.isEmpty(myProducts)}">
+    <p>등록한 상품이 없습니다.</p>
+  </div>
+  <div class="row row-cols-1 row-cols-md-3 g-4" th:if="${!#lists.isEmpty(myProducts)}">
+    <div class="col" th:each="prod : ${myProducts}">
+      <div class="card h-100">
+        <img th:src="${(prod.image != null and !#strings.isEmpty(prod.image)) ? '/uploads/' + prod.image : '/images/default.png'}"
+             class="card-img-top" alt="상품 이미지">
+        <div class="card-body">
+          <h5 class="card-title" th:text="${prod.title}"></h5>
+          <p class="card-text" th:text="${prod.description}"></p>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <small class="text-muted" th:text="'가격: ' + ${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + '원'"></small>
+          <a th:href="@{'/product/list'(highlight=${prod.id})}" class="btn btn-outline-dark btn-sm">바로가기</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+  <h3>내가 찜한 상품</h3>
+  <div th:if="${#lists.isEmpty(favoriteProducts)}">
+    <p>찜한 상품이 없습니다.</p>
+  </div>
+  <div class="row row-cols-1 row-cols-md-3 g-4" th:if="${!#lists.isEmpty(favoriteProducts)}">
+    <div class="col" th:each="prod : ${favoriteProducts}">
+      <div class="card h-100">
+        <img th:src="${(prod.image != null and !#strings.isEmpty(prod.image)) ? '/uploads/' + prod.image : '/images/default.png'}"
+             class="card-img-top" alt="상품 이미지">
+        <div class="card-body">
+          <h5 class="card-title" th:text="${prod.title}"></h5>
+          <p class="card-text" th:text="${prod.description}"></p>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <small class="text-muted" th:text="'가격: ' + ${#numbers.formatDecimal(prod.price, 0, 'COMMA', 0, 'POINT')} + '원'"></small>
+          <a th:href="@{'/product/list'(highlight=${prod.id})}" class="btn btn-outline-dark btn-sm">바로가기</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+  <h3>대화중인 채팅방</h3>
+  <div class="list-group">
+    <div th:each="room : ${chatRooms}" class="list-group-item d-flex justify-content-between align-items-center">
+      <div>
+        <strong th:text="'판매자: ' + ${room.seller}"></strong>
+        <span th:text="'상품 정보 없음'"></span>
+        <br>
+        <small th:text="${#temporals.format(room.createdAt, 'yyyy-MM-dd HH:mm')}"></small>
+      </div>
+      <div>
+        <a th:href="@{'/chat/room'(receiver=${room.seller})}" class="btn btn-outline-primary btn-sm me-2">바로가기</a>
+        <form th:action="@{/member/chatroom/leave}" method="post" style="display:inline;">
+          <input type="hidden" name="roomId" th:value="${room.id}" />
+          <button type="submit" class="btn btn-danger btn-sm">나가기</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
